@@ -1,0 +1,65 @@
+﻿@page "/"
+@using SignalR.Shared
+@using System.Diagnostics
+@inject NavigationManager NM
+<b>@Bla</b>
+<ul>
+    @foreach(Nesto n in Poruke)
+    {
+        <li>@n.Bla</li>
+    }
+</ul>
+<EditForm Model=Nesto OnSubmit=KakoGod>
+    <InputText @bind-Value=Nesto.Bla/>
+    <button type="submit" class="btn btn-danger">Teeest</button>
+</EditForm>
+
+@code
+{
+    private int Bla{ get; set; }
+    private HubConnection _hc;
+    private Nesto Nesto { get; set; } = new();
+    private List<Nesto> Poruke { get; set; } = new();
+
+    private Stopwatch _sw = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _hc = new HubConnectionBuilder()
+            .WithUrl(NM.BaseUri + "test").Build();
+
+        _hc.On<Nesto>("dodavanje", n => DodajPoruku(n));
+        _hc.On<int>("rezultat", r => PrikaziRezultat(r));
+
+        _sw.Start();
+        await _hc.StartAsync();
+        _sw.Stop();
+        Console.WriteLine(_sw.ElapsedMilliseconds);
+        _sw.Restart();
+        await _hc.SendAsync("Sab", 5, 6);
+        _sw.Stop();
+        Console.WriteLine(_sw.ElapsedMilliseconds);
+    }
+
+    private void PrikaziRezultat(int n)
+    {
+        Bla = n;
+        StateHasChanged();
+
+    }
+    private void DodajPoruku(Nesto n)
+    {
+        Poruke.Add(n);
+        StateHasChanged();
+    }
+
+    private async void KakoGod()
+    {
+        _sw.Restart();
+        await _hc.SendAsync("Foo", Nesto);
+        _sw.Stop();
+        Console.WriteLine(_sw.ElapsedMilliseconds);
+        Nesto = new();
+        StateHasChanged();
+    }
+}
